@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 
 from independent_normal import gen_scores
 
-N = 3
-n = 10
+N = 1000
+n = 10000
 k = n // 5
 r = 2
 
@@ -12,8 +12,6 @@ Z_target, Z_decoys = gen_scores(N = N,
                     n = n,
                     k = k,
                     decoys = r)
-
-# alpha = 0.3
 
 indicators = (Z_target[0] > Z_decoys[0])*1 - (Z_target[0] < Z_decoys[0])*1
 
@@ -44,22 +42,22 @@ FDR = (D2 + 0.5) / np.clip(T2-D2, 1, None)
 
 # plt.show()
 
-res = 2
-alpha = np.repeat(np.linspace(0.2, 0.4, res), N*n).reshape(res, N, n)
+res = 100
+alpha = np.repeat(np.linspace(0, 0.35, res), N*n).reshape(res, N, n)
 
-print(FDR)
-print(np.tile(FDR, (res, 1, 1)).reshape((res, N, n)))
-print(alpha)
+# print(FDR)
+# print(np.tile(FDR, (res, 1, 1)).reshape((res, N, n)))
+# print(alpha)
 
-print((FDR <= alpha)*1)
+# print((FDR <= alpha)*1)
 
 k = np.max(np.tile(np.arange(1, n+1), res*N).reshape(res, N, n) * (FDR <= alpha), axis=2).reshape(res, N, 1)
 
-print(k)
+# print(k)
 
 # raise(TypeError)
 
-# # No longer works
+# No longer works
 # plt.hist(np.min(FDR, axis=1), bins=40)
 
 # plt.show()
@@ -67,11 +65,45 @@ print(k)
 selector = ((np.arange(1, n+1) <= k) & (W[1] == 1) & (W[2] == 1) * 1)
 
 FDP = np.sum((W[3]==0) & selector, axis=2).reshape((res, N, 1)) / np.max((np.ones((res, N, 1)), np.sum(selector, axis=2).reshape((res, N, 1))), axis=0)
-print(FDP)
+# print(FDP)
 
 discovery = np.sum((W[3] == 1) & selector, axis=2).reshape((res, N, 1)) / np.sum(W[3] == 1, axis=1).reshape((N, 1))
-print(discovery)
+# print(discovery)
 
-FDRbound = np.sum((W[1] == 1) & (W[2] == -1), axis=1).reshape((N, 1)) / np.sum((W[1] == 1) & (W[2] == 1), axis=1).reshape((N, 1))
-print(FDRbound)
+FDRbound = np.sum((W[1] == 1) & (W[2] == -1) & (np.arange(1, n+1) <= k), axis=2).reshape((res, N, 1)) / np.clip(np.sum((W[1] == 1) & (W[2] == 1) & (np.arange(1, n+1) <= k), axis=2).reshape((res, N, 1)), 1, None)
 
+np.save("simulation_results/FDP.npy", FDP)
+np.save("simulation_results/discovery.npy", discovery)
+np.save("simulation_results/FDRbound.npy", FDRbound)
+
+# --- STANDARD TDC ---
+
+Wstd = [np.max((Z_target[0], Z_decoys[0], Z_decoys[1]), axis=0)]
+Wstd.append((np.argmax((Z_target[0], Z_decoys[0], Z_decoys[1]), axis=0) == 0)*2 - 1)
+Wstd.append(Z_target[1])
+
+# idx = np.argsort(W[0], axis=1, descending=True)
+
+# W[0] = np.take_along_axis(W[0], idx, axis=1)
+
+idx = np.argsort(Wstd[0], axis=1, descending=True)
+
+Wstd[0] = np.take_along_axis(Wstd[0], idx, axis=1)
+Wstd[1] = np.take_along_axis(Wstd[1], idx, axis=1)
+Wstd[2] = np.take_along_axis(Wstd[2], idx, axis=1)
+
+T = np.cumsum(Wstd[1] == 1, axis=1)
+D = np.cumsum(Wstd[1] == -1, axis=1)
+
+FDRstd = (D + 1)*0.5/np.clip(T, 1, None)
+
+kstd = np.max(np.tile(np.arange(1, n+1), res*N).reshape(res, N, n) * (FDRstd <= alpha), axis=2).reshape(res, N, 1)
+
+selector = ((np.arange(1, n+1) <= kstd) & (Wstd[1] == 1) * 1)
+
+FDPstd = np.sum((Wstd[2] == 0) & selector, axis=2).reshape((res, N, 1)) / np.max((np.ones((res, N, 1)), np.sum(selector, axis=2).reshape((res, N, 1))), axis=0)
+
+discoverystd = np.sum((Wstd[2] == 1) & selector, axis=2).reshape((res, N, 1)) / np.sum(Wstd[2] == 1, axis=1).reshape((N, 1))
+
+np.save("simulation_results/FDPstd.npy", FDPstd)
+np.save("simulation_results/discoverystd.npy", discoverystd)
