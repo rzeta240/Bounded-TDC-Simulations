@@ -3,9 +3,7 @@ import matplotlib.pyplot as plt
 
 from independent_normal import gen_scores
 
-alpha = 0.3
-
-N = 2
+N = 3
 n = 10
 k = n // 5
 r = 2
@@ -14,6 +12,8 @@ Z_target, Z_decoys = gen_scores(N = N,
                     n = n,
                     k = k,
                     decoys = r)
+
+# alpha = 0.3
 
 indicators = (Z_target[0] > Z_decoys[0])*1 - (Z_target[0] < Z_decoys[0])*1
 
@@ -44,21 +44,32 @@ FDR = (D2 + 0.5) / np.clip(T2-D2, 1, None)
 
 # plt.show()
 
-k = np.max((np.arange(1, n+1) * (FDR <= alpha)), axis=1).reshape((N, 1))
+res = 2
+alpha = np.repeat(np.linspace(0.2, 0.4, res), N*n).reshape(res, N, n)
 
-print(np.round(FDR,2))
+print(FDR)
+print(np.tile(FDR, (res, 1, 1)).reshape((res, N, n)))
+print(alpha)
+
+print((FDR <= alpha)*1)
+
+k = np.max(np.tile(np.arange(1, n+1), res*N).reshape(res, N, n) * (FDR <= alpha), axis=2).reshape(res, N, 1)
+
 print(k)
 
+# raise(TypeError)
+
+# # No longer works
 # plt.hist(np.min(FDR, axis=1), bins=40)
 
 # plt.show()
 
-selector = (np.tile(np.arange(1, n+1), N).reshape((N, n)) <= k) & (W[1] == 1) & (W[2] == 1)
+selector = ((np.arange(1, n+1) <= k) & (W[1] == 1) & (W[2] == 1) * 1)
 
-FDP = np.sum((W[3]==0) & selector, axis=1).reshape((N, 1)) / np.max((np.ones((N, 1)), np.sum(selector, axis=1).reshape((N, 1))), axis=0)
+FDP = np.sum((W[3]==0) & selector, axis=2).reshape((res, N, 1)) / np.max((np.ones((res, N, 1)), np.sum(selector, axis=2).reshape((res, N, 1))), axis=0)
 print(FDP)
 
-discovery = np.sum((W[3] == 1) & selector, axis=1).reshape((N, 1)) / np.sum(W[3] == 1, axis=1).reshape((N, 1))
+discovery = np.sum((W[3] == 1) & selector, axis=2).reshape((res, N, 1)) / np.sum(W[3] == 1, axis=1).reshape((N, 1))
 print(discovery)
 
 FDRbound = np.sum((W[1] == 1) & (W[2] == -1), axis=1).reshape((N, 1)) / np.sum((W[1] == 1) & (W[2] == 1), axis=1).reshape((N, 1))
