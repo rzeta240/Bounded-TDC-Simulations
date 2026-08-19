@@ -1,8 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from independent_normal import gen_scores
+# from independent_normal import gen_scores
 # from independent_normal_calibrated import gen_scores
+from independent_beta import gen_scores
 
 N = 1000
 n = 10000
