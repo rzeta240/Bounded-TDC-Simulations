@@ -11,15 +11,18 @@ r = 2
 Z_target, Z_decoys = gen_scores(N = N, 
                     n = n,
                     k = k,
-                    decoys = r)
+                    decoys = r,
+                    hyper_v=0.15)
 
 indicators = (Z_target[0] > Z_decoys[0])*1 - (Z_target[0] < Z_decoys[0])*1
+indicators = indicators + (indicators == 0) * np.random.choice((1, -1), indicators.shape)
 
 PT = [Z_target[0] * (indicators == 1) + Z_decoys[0] * (indicators == -1)]
 PT.append(indicators)
 PT.append(Z_target[1])
 
 indicators = (PT[0] > Z_decoys[1])*1 - (PT[0] < Z_decoys[1])*1
+indicators = indicators + (indicators == 0) * np.random.choice((1, -1), indicators.shape)
 
 W = [PT[0] * (indicators == 1) + Z_decoys[1] * (indicators == -1)]
 
@@ -42,7 +45,7 @@ FDR = (D2 + 0.5) / np.clip(T2-D2, 1, None)
 
 # plt.show()
 
-res = 100
+res = 71
 alpha = np.repeat(np.linspace(0, 0.35, res), N*n).reshape(res, N, n)
 
 # print(FDR)
@@ -64,7 +67,7 @@ k = np.max(np.tile(np.arange(1, n+1), res*N).reshape(res, N, n) * (FDR <= alpha)
 
 selector = ((np.arange(1, n+1) <= k) & (W[1] == 1) & (W[2] == 1) * 1)
 
-FDP = np.sum((W[3]==0) & selector, axis=2).reshape((res, N, 1)) / np.max((np.ones((res, N, 1)), np.sum(selector, axis=2).reshape((res, N, 1))), axis=0)
+FDP = np.sum((W[3]==0) & selector, axis=2).reshape((res, N, 1)) / np.clip(np.sum(selector, axis=2).reshape((res, N, 1)), 1, None)
 # print(FDP)
 
 discovery = np.sum((W[3] == 1) & selector, axis=2).reshape((res, N, 1)) / np.sum(W[3] == 1, axis=1).reshape((N, 1))
@@ -82,10 +85,6 @@ Wstd = [np.max((Z_target[0], Z_decoys[0], Z_decoys[1]), axis=0)]
 Wstd.append((np.argmax((Z_target[0], Z_decoys[0], Z_decoys[1]), axis=0) == 0)*2 - 1)
 Wstd.append(Z_target[1])
 
-# idx = np.argsort(W[0], axis=1, descending=True)
-
-# W[0] = np.take_along_axis(W[0], idx, axis=1)
-
 idx = np.argsort(Wstd[0], axis=1, descending=True)
 
 Wstd[0] = np.take_along_axis(Wstd[0], idx, axis=1)
@@ -101,7 +100,12 @@ kstd = np.max(np.tile(np.arange(1, n+1), res*N).reshape(res, N, n) * (FDRstd <= 
 
 selector = ((np.arange(1, n+1) <= kstd) & (Wstd[1] == 1) * 1)
 
-FDPstd = np.sum((Wstd[2] == 0) & selector, axis=2).reshape((res, N, 1)) / np.max((np.ones((res, N, 1)), np.sum(selector, axis=2).reshape((res, N, 1))), axis=0)
+# print(np.sum((Wstd[2] == 0) & selector, axis=2).reshape((res, N, 1)))
+# print(np.clip(np.sum(selector, axis=2).reshape((res, N, 1)), 1, None))
+
+FDPstd = np.sum((Wstd[2] == 0) & selector, axis=2).reshape((res, N, 1)) / np.clip(np.sum(selector, axis=2).reshape((res, N, 1)), 1, None)
+
+# print(FDPstd)
 
 discoverystd = np.sum((Wstd[2] == 1) & selector, axis=2).reshape((res, N, 1)) / np.sum(Wstd[2] == 1, axis=1).reshape((N, 1))
 

@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def gen_scores(N = 1000, n = 10000, k = 2000, decoys = 2, hyper_v = 0.35, hyper_mu = 0, hyper_w = 1, hyper_s = 1):
+def gen_scores(N = 1000, n = 10000, k = 2000, decoys = 2, hyper_v = 0.15, hyper_mu = 0, hyper_w = 1, hyper_s = 1):
     mu = np.random.normal(hyper_mu, hyper_s**2, size=(N, n))
     s = 1 + np.random.exponential(1/hyper_w, size=(N, n))
     y = np.zeros((N, n))
@@ -34,9 +34,11 @@ if __name__ == "__main__":
     
     fig, axs = plt.subplots(5, 1)
 
-    b = np.linspace(-4, 10, 40)
+    b = np.linspace(-10, 20, 60)
 
-    up = 500
+    his = np.histogram(Z_target, bins=b)
+    print(his[0])
+    up = np.max(his[0])
     
     axs[0].hist(Z_target, bins=b)
     axs[0].vlines(np.mean(Z_target), 0, up, colors = "red")
