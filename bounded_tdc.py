@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from independent_normal import gen_scores
+# from independent_normal_calibrated import gen_scores
 
 N = 1000
 n = 10000
@@ -11,8 +12,7 @@ r = 2
 Z_target, Z_decoys = gen_scores(N = N, 
                     n = n,
                     k = k,
-                    decoys = r,
-                    hyper_v=0.15)
+                    decoys = r)
 
 indicators = (Z_target[0] > Z_decoys[0])*1 - (Z_target[0] < Z_decoys[0])*1
 indicators = indicators + (indicators == 0) * np.random.choice((1, -1), indicators.shape)
