@@ -32,18 +32,18 @@ for i, s in enumerate(sims):
     fig1data = FDRbounds[i] - FDPs[i]
 
     # # First plot
-    axs[0, i].plot(alpha, np.mean(fig1data, axis=1))
-    axs[0, i].plot(alpha, np.mean(fig1data, axis=1) + np.std(fig1data, axis=1))
-    axs[0, i].plot(alpha, np.mean(fig1data, axis=1) - np.std(fig1data, axis=1))
+    axs[0, i].plot(alpha, np.quantile(fig1data, 0.5, axis=1))
+    axs[0, i].plot(alpha, np.quantile(fig1data, 0.75, axis=1))
+    axs[0, i].plot(alpha, np.quantile(fig1data, 0.25, axis=1))
     axs[0, i].grid()
 
     # # Second plot
-    axs[1, i].plot(alpha, np.mean(FDPs[i], axis=1), color="red")
-    axs[1, i].plot(alpha, np.mean(FDPs[i], axis=1) + np.std(FDPs[i], axis=1), color="red", linestyle="--")
-    axs[1, i].plot(alpha, np.mean(FDPs[i], axis=1) - np.std(FDPs[i], axis=1), color="red", linestyle="--")
-    axs[1, i].plot(alpha, np.mean(FDPsstd[i], axis=1), color="blue")
-    axs[1, i].plot(alpha, np.mean(FDPsstd[i], axis=1) + np.std(FDPsstd[i], axis=1), color="blue", linestyle="--")
-    axs[1, i].plot(alpha, np.mean(FDPsstd[i], axis=1) - np.std(FDPsstd[i], axis=1), color="blue", linestyle="--")
+    axs[1, i].plot(alpha, np.quantile(FDPs[i], 0.5, axis=1), color="red")
+    axs[1, i].plot(alpha, np.quantile(FDPs[i], 0.75, axis=1), color="red", linestyle="--")
+    axs[1, i].plot(alpha, np.quantile(FDPs[i], 0.25, axis=1), color="red", linestyle="--")
+    axs[1, i].plot(alpha, np.quantile(FDPsstd[i], 0.5, axis=1), color="blue")
+    axs[1, i].plot(alpha, np.quantile(FDPsstd[i], 0.75, axis=1), color="blue", linestyle="--")
+    axs[1, i].plot(alpha, np.quantile(FDPsstd[i], 0.25, axis=1), color="blue", linestyle="--")
     axs[1, i].plot(alpha, alpha, color="green", linewidth=3)
     axs[1, i].grid()
     # plt.hist(FDPsstd[i][14], bins=40)
