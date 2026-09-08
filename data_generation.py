@@ -299,6 +299,7 @@ def dependent_beta(N = 1000, n = 10000, k=2000, decoys = 2, a = 0.05, b = 3, c =
     # Step 5: Generating Scores
     
     Xnat = 1 - np.random.beta(a, b, size=(N, len(smt)))
+    
     Xnat = np.repeat(Xnat, repeats=smt["multiplicity"], axis=1)
     
     Ynat = np.random.beta(c-1, 1, size=(N, len(smt)))
@@ -322,7 +323,7 @@ def dependent_beta(N = 1000, n = 10000, k=2000, decoys = 2, a = 0.05, b = 3, c =
     
     def gen_noise(l, d, v):
         for i in range(len(d)):
-            l.append(np.random.normal(size=(N, np.int16(d["multiplicity"][i]))) * d[v][i])
+            l.append(np.random.normal(size=(N, np.int64(d["multiplicity"][i]))) * d[v][i])
     
     # Native noise
     
@@ -366,11 +367,44 @@ def dependent_beta(N = 1000, n = 10000, k=2000, decoys = 2, a = 0.05, b = 3, c =
     
     # Step 7: Determining simulated target scores
     
-    Z_target = [np.clip(np.max((np.c_[Xnat, Xfor], np.c_[Ynat, Yfor]), axis=0), 0, 1)]
+    # Z_target = [np.clip(np.max((np.c_[Xnat, Xfor], np.c_[Ynat, Yfor]), axis=0), 0, 1)]
+    Z_target = [np.max((np.c_[Xnat, Xfor], np.c_[Ynat, Yfor]), axis=0)]
     Z_target.append((np.c_[Xnat, Xfor] > np.c_[Ynat, Yfor]) * 1)
     
     Z_decoys = []
     for i in range(decoys):
-        Z_decoys.append(np.clip(np.c_[Dnats[i], Dfors[i]], 0, 1))
+        # Z_decoys.append(np.clip(np.c_[Dnats[i], Dfors[i]], 0, 1))
+        Z_decoys.append(np.c_[Dnats[i], Dfors[i]])
         
     return [Z_target, Z_decoys]
+
+if __name__ == "__main__":
+    Z_target1, Z_decoy1 = independent_beta(N=1)
+    
+    Z_target1[0] = Z_target1[0].flatten()
+    Z_decoy1[0] = Z_decoy1[0].flatten()
+    
+    Z_target2, Z_decoy2 = dependent_beta(N=1)
+    
+    Z_target2[0] = Z_target2[0].flatten()
+    Z_decoy2[0] = Z_decoy2[0].flatten()
+    
+    fig, axs = plt.subplots(2, 2, figsize=(8,6))
+    
+    thres = 0
+    
+    axs[0, 0].hist(Z_target1[0][Z_target1[0] > thres], bins=50)
+    axs[0, 0].set_title("independent beta")
+    
+    axs[1, 0].hist(Z_decoy1[0][Z_decoy1[0] > thres], bins=50)
+    
+    axs[0, 1].hist(Z_target2[0][Z_target2[0] > thres], bins=50)
+    axs[0, 1].set_title("dependent beta")
+    
+    axs[1, 1].hist(Z_decoy2[0][Z_decoy2[0] > thres], bins=50)
+    
+    plt.tight_layout()
+    
+    plt.show()
+    
+    print(np.min(np.abs(Z_target1[0] - 1)))
