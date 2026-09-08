@@ -22,7 +22,7 @@ print("|" + "|".join([s.center(15) for s in np.tile(np.array(["Uncalibrated", "C
 # print("|".join([s.center(15) for s in (" ")*6]))
 print("|" + "|".join(f"[{i+1}]".center(15) for i in range(6)) + "|")
 print("\u203e"*97)
-print("Type \"a\" to generate for all distributions")
+print("Type \"a\" to generate from all distributions")
 print()
 
 response = input()
@@ -47,119 +47,138 @@ for s in selected:
     print(f"Generating {s.__name__} scores...")
     start_time = time.process_time()
     
-    N = 1000
-    n = 10000
-    k = n // 5
-    r = 2
+    reps = 10
     
-    Z_target, Z_decoys = s(N = N, 
-                        n = n,
-                        k = k,
-                        decoys = r)
-
-    (N, n) = Z_target[0].shape
-
-    indicators = (Z_target[0] > Z_decoys[0])*1 - (Z_target[0] < Z_decoys[0])*1
-    indicators = indicators + (indicators == 0) * np.random.choice((1, -1), indicators.shape)
-
-    PT = [Z_target[0] * (indicators == 1) + Z_decoys[0] * (indicators == -1)]
-    PT.append(indicators)
-    PT.append(Z_target[1])
-
-    indicators = (PT[0] > Z_decoys[1])*1 - (PT[0] < Z_decoys[1])*1
-    indicators = indicators + (indicators == 0) * np.random.choice((1, -1), indicators.shape)
-
-    W = [PT[0] * (indicators == 1) + Z_decoys[1] * (indicators == -1)]
-
-    idx = np.argsort(W[0], axis=1, descending=True)
-
-    W[0] = np.take_along_axis(W[0], idx, axis=1)
-
-    W.append(np.take_along_axis(indicators, idx, axis=1))
-    W.append(np.take_along_axis(PT[1], idx, axis=1))
-    W.append(np.take_along_axis(PT[2], idx, axis=1))
-
-    D2 = np.cumsum(W[1] == -1, axis=1)
-    T2 = np.cumsum(W[1] == 1, axis=1)
-    D1 = np.cumsum((W[1] == 1) & (W[2] == -1), axis=1)
-
-    FDR = (D2 + 0.5) / np.clip(T2-D2, 1, None)
-
-    # # Graph of Minimum FDR
-    # plt.hist(np.min(FDR, axis=1), bins=40)
-
-    # plt.show()
-
-    res = 71
-    alpha = np.repeat(np.linspace(0, 0.35, res), N*n).reshape(res, N, n)
-
-    # print(FDR)
-    # print(np.tile(FDR, (res, 1, 1)).reshape((res, N, n)))
-    # print(alpha)
-
-    # print((FDR <= alpha)*1)
-
-    k = np.max(np.tile(np.arange(1, n+1), res*N).reshape(res, N, n) * (FDR <= alpha), axis=2).reshape(res, N, 1)
-
-    # print(k)
-
-    # raise(TypeError)
-
-    # No longer works
-    # plt.hist(np.min(FDR, axis=1), bins=40)
-
-    # plt.show()
-
-    selector = ((np.arange(1, n+1) <= k) & (W[1] == 1) & (W[2] == 1) * 1)
-
-    FDP = np.sum((W[3]==0) & selector, axis=2).reshape((res, N, 1)) / np.clip(np.sum(selector, axis=2).reshape((res, N, 1)), 1, None)
-    # print(FDP)
-
-    discovery = np.sum((W[3] == 1) & selector, axis=2).reshape((res, N, 1)) / np.sum(W[3] == 1, axis=1).reshape((N, 1))
-    # print(discovery)
-
-    FDRbound = np.sum((W[1] == 1) & (W[2] == -1) & (np.arange(1, n+1) <= k), axis=2).reshape((res, N, 1)) / np.clip(np.sum((W[1] == 1) & (W[2] == 1) & (np.arange(1, n+1) <= k), axis=2).reshape((res, N, 1)), 1, None)
-
-    if not os.path.exists(f"simulation_results/{s.__name__}"):
-        os.makedirs(f"simulation_results/{s.__name__}")
+    for rep in range(reps):
+        N = 1000
+        n = 10000
+        k = n // 5
+        r = 2
         
-    np.save(f"simulation_results/{s.__name__}/FDP.npy", FDP)
-    np.save(f"simulation_results/{s.__name__}/discovery.npy", discovery)
-    np.save(f"simulation_results/{s.__name__}/FDRbound.npy", FDRbound)
+        Z_target, Z_decoys = s(N = N, 
+                            n = n,
+                            k = k,
+                            decoys = r)
 
-    # --- STANDARD TDC ---
+        (N, n) = Z_target[0].shape
 
-    Wstd = [np.max((Z_target[0], Z_decoys[0], Z_decoys[1]), axis=0)]
-    Wstd.append((np.argmax((Z_target[0], Z_decoys[0], Z_decoys[1]), axis=0) == 0)*2 - 1)
-    Wstd.append(Z_target[1])
+        indicators = (Z_target[0] > Z_decoys[0])*1 - (Z_target[0] < Z_decoys[0])*1
+        indicators = indicators + (indicators == 0) * np.random.choice((1, -1), indicators.shape)
 
-    idx = np.argsort(Wstd[0], axis=1, descending=True)
+        PT = [Z_target[0] * (indicators == 1) + Z_decoys[0] * (indicators == -1)]
+        PT.append(indicators)
+        PT.append(Z_target[1])
 
-    Wstd[0] = np.take_along_axis(Wstd[0], idx, axis=1)
-    Wstd[1] = np.take_along_axis(Wstd[1], idx, axis=1)
-    Wstd[2] = np.take_along_axis(Wstd[2], idx, axis=1)
+        indicators = (PT[0] > Z_decoys[1])*1 - (PT[0] < Z_decoys[1])*1
+        indicators = indicators + (indicators == 0) * np.random.choice((1, -1), indicators.shape)
 
-    T = np.cumsum(Wstd[1] == 1, axis=1)
-    D = np.cumsum(Wstd[1] == -1, axis=1)
+        W = [PT[0] * (indicators == 1) + Z_decoys[1] * (indicators == -1)]
 
-    FDRstd = (D + 1)*0.5/np.clip(T, 1, None)
+        idx = np.argsort(-W[0], axis=1)
 
-    kstd = np.max(np.tile(np.arange(1, n+1), res*N).reshape(res, N, n) * (FDRstd <= alpha), axis=2).reshape(res, N, 1)
+        W[0] = np.take_along_axis(W[0], idx, axis=1)
 
-    selector = ((np.arange(1, n+1) <= kstd) & (Wstd[1] == 1) * 1)
+        W.append(np.take_along_axis(indicators, idx, axis=1))
+        W.append(np.take_along_axis(PT[1], idx, axis=1))
+        W.append(np.take_along_axis(PT[2], idx, axis=1))
 
-    # print(np.sum((Wstd[2] == 0) & selector, axis=2).reshape((res, N, 1)))
-    # print(np.clip(np.sum(selector, axis=2).reshape((res, N, 1)), 1, None))
+        D2 = np.cumsum(W[1] == -1, axis=1)
+        T2 = np.cumsum(W[1] == 1, axis=1)
+        D1 = np.cumsum((W[1] == 1) & (W[2] == -1), axis=1)
 
-    FDPstd = np.sum((Wstd[2] == 0) & selector, axis=2).reshape((res, N, 1)) / np.clip(np.sum(selector, axis=2).reshape((res, N, 1)), 1, None)
+        FDR = (D2 + 0.5) / np.clip(T2-D2, 1, None)
 
-    # print(FDPstd)
+        # # Graph of Minimum FDR
+        # plt.hist(np.min(FDR, axis=1), bins=40)
 
-    discoverystd = np.sum((Wstd[2] == 1) & selector, axis=2).reshape((res, N, 1)) / np.sum(Wstd[2] == 1, axis=1).reshape((N, 1))
+        # plt.show()
 
-    np.save(f"simulation_results/{s.__name__}/FDPstd.npy", FDPstd)
-    np.save(f"simulation_results/{s.__name__}/discoverystd.npy", discoverystd)
-    
+        res = 71
+        alpha = np.repeat(np.linspace(0, 0.35, res), N*n).reshape(res, N, n)
+
+        # print(FDR)
+        # print(np.tile(FDR, (res, 1, 1)).reshape((res, N, n)))
+        # print(alpha)
+
+        # print((FDR <= alpha)*1)
+
+        k = np.max(np.tile(np.arange(1, n+1), res*N).reshape(res, N, n) * (FDR <= alpha), axis=2).reshape(res, N, 1)
+
+        # plt.scatter(np.linspace(0, 0.35, res), np.mean(k, axis=1))
+
+        # plt.show()
+        
+        # break
+
+        selector = ((np.arange(1, n+1) <= k) & (W[1] == 1) & (W[2] == 1) * 1)
+
+        FDP = np.sum((W[3]==0) & selector, axis=2).reshape((res, N, 1)) / np.clip(np.sum(selector, axis=2).reshape((res, N, 1)), 1, None)
+        # print(FDP)
+
+        discovery = np.sum((W[3] == 1) & selector, axis=2).reshape((res, N, 1)) / np.sum(W[3] == 1, axis=1).reshape((N, 1))
+        # print(discovery)
+
+        FDRbound = np.sum((W[1] == 1) & (W[2] == -1) & (np.arange(1, n+1) <= k), axis=2).reshape((res, N, 1)) / np.clip(np.sum((W[1] == 1) & (W[2] == 1) & (np.arange(1, n+1) <= k), axis=2).reshape((res, N, 1)), 1, None)
+
+        if not os.path.exists(f"simulation_results/{s.__name__}"):
+            os.makedirs(f"simulation_results/{s.__name__}")
+            
+        if rep == 0:
+            np.save(f"simulation_results/{s.__name__}/FDP.npy", FDP)
+            np.save(f"simulation_results/{s.__name__}/discovery.npy", discovery)
+            np.save(f"simulation_results/{s.__name__}/FDRbound.npy", FDRbound)
+        else:
+            FDPstash = np.load(f"simulation_results/{s.__name__}/FDP.npy")
+            np.save(f"simulation_results/{s.__name__}/FDP.npy", np.concat((FDPstash, FDP), axis=1))
+            
+            discoverystash = np.load(f"simulation_results/{s.__name__}/discovery.npy")
+            np.save(f"simulation_results/{s.__name__}/discovery.npy", np.concat((discoverystash, discovery), axis=1))
+            
+            FDRboundstash = np.load(f"simulation_results/{s.__name__}/FDRbound.npy")
+            np.save(f"simulation_results/{s.__name__}/FDRbound.npy", np.concat((FDRboundstash, FDRbound), axis=1))
+
+        # --- STANDARD TDC ---
+
+        Wstd = [np.max((Z_target[0], Z_decoys[0], Z_decoys[1]), axis=0)]
+        Wstd.append((np.argmax((Z_target[0], Z_decoys[0], Z_decoys[1]), axis=0) == 0)*2 - 1)
+        Wstd.append(Z_target[1])
+
+        idx = np.argsort(-Wstd[0], axis=1)
+
+        Wstd[0] = np.take_along_axis(Wstd[0], idx, axis=1)
+        Wstd[1] = np.take_along_axis(Wstd[1], idx, axis=1)
+        Wstd[2] = np.take_along_axis(Wstd[2], idx, axis=1)
+
+        T = np.cumsum(Wstd[1] == 1, axis=1)
+        D = np.cumsum(Wstd[1] == -1, axis=1)
+
+        FDRstd = (D + 1)*0.5/np.clip(T, 1, None)
+
+        kstd = np.max(np.tile(np.arange(1, n+1), res*N).reshape(res, N, n) * (FDRstd <= alpha), axis=2).reshape(res, N, 1)
+
+        selector = ((np.arange(1, n+1) <= kstd) & (Wstd[1] == 1) * 1)
+
+        # print(np.sum((Wstd[2] == 0) & selector, axis=2).reshape((res, N, 1)))
+        # print(np.clip(np.sum(selector, axis=2).reshape((res, N, 1)), 1, None))
+
+        FDPstd = np.sum((Wstd[2] == 0) & selector, axis=2).reshape((res, N, 1)) / np.clip(np.sum(selector, axis=2).reshape((res, N, 1)), 1, None)
+
+        # print(FDPstd)
+
+        discoverystd = np.sum((Wstd[2] == 1) & selector, axis=2).reshape((res, N, 1)) / np.sum(Wstd[2] == 1, axis=1).reshape((N, 1))
+
+        if rep == 0:
+            np.save(f"simulation_results/{s.__name__}/FDPstd.npy", FDPstd)
+            np.save(f"simulation_results/{s.__name__}/discoverystd.npy", discoverystd)
+        else:
+            FDPstdstash = np.load(f"simulation_results/{s.__name__}/FDPstd.npy")
+            np.save(f"simulation_results/{s.__name__}/FDPstd.npy", np.concat((FDPstdstash, FDPstd), axis=1))
+            
+            discoverystdstash = np.load(f"simulation_results/{s.__name__}/discoverystd.npy")
+            np.save(f"simulation_results/{s.__name__}/discoverystd.npy", np.concat((discoverystdstash, discoverystd), axis=1))
+        
+        reps -= 1
+        
     print(f"Done in {(time.process_time() - start_time):.3f} seconds.")
     
 if len(selected) > 1:
